@@ -46,15 +46,22 @@ class TestScenariosMessage(StreamableMessage):
 
 
 class Metric(BaseModel):
-    short_name: str
     name: str
-    description: str = ""
-    assessment: str | float
+    score: int | None = None
+    feedback: str | None = None
+    issues: list[str] | None = None
+    improvements: list[str] | None = None
+
+class MetricsList(BaseModel):
+    name : str | None = None
+    metrics: list[Metric]
+    feedback: str | None = None
+    score: int | None = None
 
 class MetricsMessage(StreamableMessage):
     source : Literal["agent"] = "agent"
     type: Literal["metrics"] = "metrics"
-
+    details : Metric | MetricsList
 
 
 class NodePreconditionFailure(BaseException):
