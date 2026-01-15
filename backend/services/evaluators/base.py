@@ -1,10 +1,11 @@
+import datetime
 from dataclasses import dataclass, field
 from typing import Generator, Any, Literal, Callable
 from typing import Sequence
 from selenium.webdriver.remote.webdriver import WebDriver
-
+from functools import partial
 import requests
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from .returning_generators import ReturningGenerator
 import logging
 
@@ -21,11 +22,19 @@ class StreamableMessage(BaseModel):
         "info", "improvement", "warning", "error",
         "bug", "vulnerability", "malicious", "success"
     ] = "info"
-    details: dict[str, Any] = field(default_factory=dict)
+    details: Any = None
+    timestamp: datetime.datetime = Field(default_factory=partial(datetime.datetime.now,tz=datetime.timezone.utc))
+
+class StateDetails(BaseModel):
+    agent_id : str | None = None
+    scenario_id : str | None = None
+    is_end_state : bool = False
+
 
 class OrchestratorStateMessage(StreamableMessage):
     source : Literal["orchestrator"] = "orchestrator"
     type: Literal["state"] = "state"
+    details: StateDetails | None = None
 
 class AgentAssessmentMessage(StreamableMessage):
     source : Literal["agent"] = "agent"
@@ -33,6 +42,7 @@ class AgentAssessmentMessage(StreamableMessage):
 class TestScenariosMessage(StreamableMessage):
     source : Literal["agent"] = "agent"
     type: Literal["test_scenarios"] = "test_scenarios"
+
 
 
 class Metric(BaseModel):
@@ -210,6 +220,12 @@ class BaseExecutionNode:
     def get_node_instance(cls, node_name: str, *args, **kwargs):
         return cls.get_node_cls(node_name)(*args, **kwargs)
 
+    @property
+    def full_name(self):
+        if hasattr(self, "node_name"):
+            return self.node_name.replace("_", " ").upper()
+        raise ValueError("A default full name requires node_name attribute.")
+
 
 class Orchestrator:
     def __init__(self, evaluators: list[BaseExecutionNode]):
@@ -232,6 +248,10 @@ class Orchestrator:
         )
         for evaluator in self.evaluators:
             # Iterates evaluators; yields messages; handles exceptions
+            yield OrchestratorStateMessage(
+                message=f"Starting evaluation of {evaluator.node_name}...",
+                details=StateDetails(agent_id=evaluator.node_name),
+            )
             messages = []
             try:
                 gen = evaluator.evaluate(*args, context=context, **kwargs)
@@ -258,3 +278,4 @@ class Orchestrator:
                     level="error",
                     message=f"{evaluator.node_name} failed to run due to an unexpected error. Please contact support..",
                 )
+        yield OrchestratorStateMessage(message="Evaluation complete.", details=StateDetails(is_end_state=True))

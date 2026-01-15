@@ -1,6 +1,7 @@
-from typing import Generator, Any, Literal
+from typing import Generator, Literal
 
-from services.evaluators.base import BaseExecutionNode, ContextData, StreamableMessage, AgentAssessmentMessage
+from services.evaluators.base import BaseExecutionNode, ContextData, StreamableMessage, AgentAssessmentMessage, \
+    OrchestratorStateMessage, StateDetails
 from services.evaluators.connectivity import DriverAccessNode
 from services.evaluators.qa.generation import TestScenarioGenerationNode
 from services.llm.agents import (
@@ -34,8 +35,12 @@ class TestScenarioExecutionNode(BaseExecutionNode, node_name="scenario_execution
 
         for scenario in scenarios_list.scenarios:
             try:
-                yield AgentAssessmentMessage(message=f"Executing scenario: {scenario.name}",
-                                             scenario_id=scenario.short_name, level="info")
+                yield OrchestratorStateMessage(
+                    message=f"Executing scenario {scenario.name}...",
+                    details=StateDetails(
+                        agent_id=self.node_name,
+                        scenario_id=scenario.short_name),
+                   )
                 result = invoke_scenario_execution_agent(
                     context.driver, scenario, context.url, DEFAULT_MODEL
                 )

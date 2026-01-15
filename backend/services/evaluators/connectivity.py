@@ -31,6 +31,7 @@ class AccessCheckNode(BaseExecutionNode, node_name="access_check"):
     def _evaluate_impl(
         self, *args, context: ContextData = None, **kwargs
     ) -> Generator[StreamableMessage, None, Any]:
+        issues = []
         shake = context.session.options(context.url)
         if not shake.ok:
             yield StreamableMessage(
