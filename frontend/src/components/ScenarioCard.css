@@ -1,0 +1,48 @@
+.scenario-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #fafafa;
+  padding: 1rem;
+  transition: border-color 0.3s, background-color 0.3s;
+}
+
+.scenario-card.active {
+  border-color: #ff9800;
+  background-color: #fff8e1;
+}
+
+.scenario-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.scenario-name-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.scenario-name-wrapper .execution-icon {
+  font-size: 0.9rem;
+  color: #ff9800;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.scenario-header h5 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.scenario-badges {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.scenario-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
