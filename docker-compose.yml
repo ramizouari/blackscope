@@ -1,0 +1,37 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: blackscope-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - MODE=dev
+      - CLIENT_HOST=frontend
+      - HEADLESS_BROWSER=true
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+      - /dev/shm:/dev/shm  # Shared memory for browser
+    restart: unless-stopped
+    networks:
+      - blackscope-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: blackscope-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - blackscope-network
+
+networks:
+  blackscope-network:
+    driver: bridge
