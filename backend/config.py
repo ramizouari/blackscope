@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic_settings import BaseSettings
 
 
@@ -7,6 +9,7 @@ class Config(BaseSettings):
     headless_browser: bool = True
     browser_width: int = 1920
     browser_height: int = 1080
+    browser_driver: Literal["chrome", "firefox"] = "chrome"
     deepseek_api_key: str | None = None
     openai_api_key: str | None = None
     huggingfacehub_api_token: str | None = None

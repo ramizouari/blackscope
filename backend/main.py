@@ -9,7 +9,7 @@ from pydantic import BaseModel
 import config
 from services.evaluators.base import Orchestrator, StreamableMessage
 from services.evaluators.connectivity import AccessCheckNode, DriverAccessNode
-from services.evaluators.drivers import create_headless_firefox_driver
+from services.evaluators.drivers import create_driver
 from services.evaluators.html.compliance import HtmlComplianceNode
 from services.evaluators.html.parser import HtmlParsingNode
 from services.evaluators.qa.scenarios.execution import TestScenarioExecutionNode
@@ -89,7 +89,7 @@ async def provide_quality_assurance(url: UrlRequest):
             ]
         )
 
-        with requests.Session() as session, create_headless_firefox_driver() as driver:
+        with requests.Session() as session, create_driver() as driver:
             session.headers.update(
                 {
                     "User-Agent": "HTML-QA/0.1",
