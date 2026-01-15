@@ -3,6 +3,7 @@ import MessageItem from "./MessageItem";
 import ScenarioCard from "./ScenarioCard";
 import TestScenarioList from "./TestScenarioList";
 import MetricsDisplay from "./MetricsDisplay";
+import TestExecutionReportTable from "./TestExecutionReportTable";
 import { RotatingLines } from "react-loader-spinner";
 
 
@@ -62,6 +63,10 @@ function AgentCard({ agent }: AgentCardProps) {
             </div>
           </div>
         )}
+
+          {agent.executionReport && (
+              <TestExecutionReportTable report={agent.executionReport} />
+          )}
       </div>
     </div>
   );

@@ -13,7 +13,8 @@ export type MessageType =
   | "state"
   | "feedback"
   | "test_scenarios"
-  | "metrics";
+  | "metrics"
+  | "test_execution_report";
 
 export type MessageSource = "agent" | "orchestrator";
 
@@ -45,20 +46,40 @@ export interface MetricsList {
   score?: number;
 }
 
+export interface TestExecutionResult {
+  scenario_name: string;
+  status: string;
+  execution_details: string;
+  errors_encountered?: string[];
+  execution_time_seconds?: number;
+}
+
+export interface TestExecutionReport {
+  total_scenarios: number;
+  passed: number;
+  failed: number;
+  errors: number;
+  results: TestExecutionResult[];
+}
+
 export interface StateDetails {
   agent_id?: string;
+  agent_name?: string;
   scenario_id?: string;
+  scenario_name?: string;
   is_end_state?: boolean;
 }
 
 export interface StreamableMessage {
   agent_id?: string;
+  agent_name?: string
   scenario_id?: string;
+  scenario_name?: string;
   message: string;
   source: MessageSource;
   type: MessageType;
   level: MessageLevel;
-  details?: TestScenarioList | Metric | MetricsList | StateDetails | any;
+  details?: TestScenarioList | Metric | MetricsList | StateDetails | TestExecutionReport | any;
   timestamp: string;
 }
 
@@ -76,6 +97,7 @@ export interface AgentState {
   isComplete: boolean;
   testScenarios?: TestScenario[];
   metrics?: Metric | MetricsList;
+  executionReport?: TestExecutionReport;
 }
 
 export interface ScenarioState {
