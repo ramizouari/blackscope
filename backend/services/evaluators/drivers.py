@@ -3,12 +3,12 @@ from selenium import webdriver
 import config
 
 def create_driver():
-    match config.config.browser_type:
+    match config.config.browser_driver:
         case "firefox":
             return create_firefox_driver()
         case "chrome":
             return create_selenium_driver()
-    raise ValueError(f"Unsupported browser type: {config.config.browser_type}")
+    raise ValueError(f"Unsupported browser type: {config.config.browser_driver}")
 
 def create_firefox_driver():
     """Create a headless Firefox WebDriver with typing."""
