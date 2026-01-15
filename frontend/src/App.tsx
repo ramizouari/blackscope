@@ -2,7 +2,7 @@ import { useState } from "react";
 import "./App.css";
 import URLForm from "./components/URLForm";
 import AgentDashboard from "./components/AgentDashboard";
-import type { AgentState, StreamableMessage, UpdateMessage } from "./types";
+import type {AgentState, MetricsList, StateDetails, StreamableMessage, TestExecutionReport, TestScenarioList, UpdateMessage} from "./types";
 
 function App() {
   const [agents, setAgents] = useState<Map<string, AgentState>>(new Map());
@@ -38,6 +38,8 @@ function App() {
         throw new Error("No response body");
       }
 
+      let remainingChunk = "";
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
@@ -50,7 +52,13 @@ function App() {
         }
 
         const chunk = decoder.decode(value);
+        const skipLastLine = chunk.at(chunk.length - 1) !== "\n"
+
         const lines = chunk.split("\n").filter((line) => line.trim());
+        if(remainingChunk.length > 0)
+          lines[0] = remainingChunk + lines[0];
+        if(skipLastLine)
+          remainingChunk = lines.pop() ?? "";
 
         for (const line of lines) {
           try {
@@ -65,10 +73,10 @@ function App() {
               if (!agent) {
                 agent = {
                   id: agentId,
-                  name: agentId,
+                  name: message.agent_name ?? agentId,
                   messages: [],
                   scenarios: new Map(),
-                  isActive: false,
+                  isActive: true,
                   isComplete: false,
                 };
                 newAgents.set(agentId, agent);
@@ -76,7 +84,7 @@ function App() {
 
               // Handle state messages
               if (message.type === "state" && message.details) {
-                const details = message.details as any;
+                const details = message.details as StateDetails;
                 if (details.is_end_state) {
                   // Formal completion - mark all agents as inactive
                   newAgents.forEach((a) => {
@@ -108,7 +116,7 @@ function App() {
                       if (!scenario) {
                         scenario = {
                           id: details.scenario_id,
-                          name: details.scenario_id,
+                          name: details.scenario_name ?? details.scenario_id,
                           messages: [],
                           isActive: true,
                           isComplete: false,
@@ -124,13 +132,18 @@ function App() {
 
               // Handle test scenarios message
               if (message.type === "test_scenarios" && message.details) {
-                const scenarioList = message.details as any;
+                const scenarioList = message.details as TestScenarioList;
                 agent.testScenarios = scenarioList.scenarios || [];
               }
 
               // Handle metrics message
               if (message.type === "metrics" && message.details) {
-                agent.metrics = message.details as any;
+                agent.metrics = message.details as MetricsList;
+              }
+
+              // Handle test execution report message
+              if (message.type === "test_execution_report" && message.details) {
+                agent.executionReport = message.details as TestExecutionReport;
               }
 
               // Add message to agent or scenario
