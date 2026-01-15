@@ -6,7 +6,7 @@ class Config(BaseSettings):
     headless_browser: bool = True
     deepseek_api_key: str | None = None
     openai_api_key: str | None = None
-    hf_token: str | None = None
+    huggingfacehub_api_token: str | None = None
 
     class Config:
         env_file = ".env"

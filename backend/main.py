@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from fastapi.responses import Response, StreamingResponse
 from fastapi import status
+from fastapi.middleware.cors import CORSMiddleware
 import requests
-import json
 
-from openai import BaseModel
+from pydantic import BaseModel
 
 from services.evaluators.base import Orchestrator, StreamableMessage
 from services.evaluators.connectivity import AccessCheckNode, DriverAccessNode
@@ -24,7 +24,23 @@ class UpdateMessage(BaseModel):
     content: StreamableMessage
 
 
-app = FastAPI()
+app = FastAPI(
+    title="Blackscope",
+    description="Provides Q/A assessment for websites using AI",
+    version="0.0.1",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
@@ -33,9 +49,16 @@ async def root():
 
 
 @app.post("/qa")
-async def provide_qa(url: UrlRequest):
+async def provide_quality_assurance(url: UrlRequest):
     """
-    Generate Q/A assessment for a given URL.
+    Handles a POST request to perform a quality assurance evaluation of a webpage.
+
+    The function orchestrates several nodes for conducting a quality assessment,
+    including accessibility checks, HTML parsing, compliance evaluation, test
+    scenario generation and execution, UI analysis, and driver access. The
+    orchestrator evaluates the given URL using both HTTP session requests and a
+    headless Firefox browser. The results of the evaluation are streamed back to
+    the client as newline-delimited JSON (NDJSON) updates.
     """
 
     def generate():
