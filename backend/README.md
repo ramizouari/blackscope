@@ -186,7 +186,9 @@ backend/
 Example:
 
 ```python
-from services.evaluators.base import EvaluatorNode, StreamableMessage
+from services.evaluators.base import EvaluatorNode
+from services.evaluators.messages import StreamableMessage
+
 
 class MyCustomNode(EvaluatorNode):
     def evaluate(self, url: str, session, driver):
