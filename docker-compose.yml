@@ -8,7 +8,7 @@ services:
       - "8000:8000"
     environment:
       - MODE=dev
-      - CLIENT_HOST=frontend
+      - CLIENT_HOST="http://frontend"
       - HEADLESS_BROWSER=true
     env_file:
       - ./backend/.env
