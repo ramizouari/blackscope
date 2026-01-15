@@ -119,12 +119,20 @@ class NodeDependencyFailure(NodePreconditionFailure):
 
 @dataclass
 class AgentExecutionArtifact:
+    """Represents the execution result and streamed messages of an agent."""
     agent: str
     messages: list[StreamableMessage]
     value: Any
 
 
 class NodeExecutionHistory:
+    """
+    Handles the execution history of nodes in a system.
+
+    This class is used to manage and store the execution results of nodes, represented
+    by `AgentExecutionArtifact` instances. It allows adding new results, retrieving
+    them, and checking if a specific agent's execution is part of the history.
+    """
     def __init__(self):
         self.results: list[AgentExecutionArtifact] = []
         self._mapper: dict[str, AgentExecutionArtifact] = {}
@@ -145,6 +153,14 @@ class NodeExecutionHistory:
 
 @dataclass
 class ContextData:
+    """
+    Represents the context data used in various operations.
+
+    This class encapsulates essential details such as the target URL,
+    an HTTP session, a browser driver instance, and execution history.
+    It is particularly useful for accessing dependent values in the
+    evaluation processing framework.
+    """
     url: str
     session: requests.Session
     driver: WebDriver
@@ -152,6 +168,15 @@ class ContextData:
 
 
 class BaseExecutionNode:
+    """
+    Represents a base class for execution nodes within the evaluation processing framework.
+
+    This class provides the foundation for creating and managing execution nodes, each
+    of which may have specific dependencies and processing logic. It includes functionality
+    for dependency verification, dynamic subclass registration, and execution workflow
+    management. Subclasses must implement the `_evaluate_impl` method to define their
+    specific evaluation logic.
+    """
     __node_cls_mapper__ = {}
 
     # List of evaluator names or classes that this evaluator depends on
@@ -201,7 +226,18 @@ class BaseExecutionNode:
         cls.__node_cls_mapper__[node_name] = cls
         cls.node_name = node_name
 
-    def evaluate_without_messages(self, *args, context: ContextData = None, **kwargs) -> None:
+    def evaluate_without_messages(self, *args, context: ContextData = None, **kwargs) -> Any:
+        """
+        Evaluates expressions without emitting intermediate messages by consuming the
+        evaluation generator completely. This method ensures that all dependencies are
+        handled prior to processing and directly retrieves the final value of evaluation.
+
+        :param args: Positional arguments to pass to the evaluation function.
+        :param context: The contextual data for execution, supplied as an
+            instance of ContextData.
+        :param kwargs: Keyword arguments to pass to the evaluation function.
+        :return: The final value yielded by the evaluation generator.
+        """
         self._ensure_dependencies(context)
         gen = self.evaluate(*args, context=context, **kwargs)
         for _ in gen:
@@ -210,12 +246,25 @@ class BaseExecutionNode:
 
     def _evaluate_impl(
         self, *args, context: ContextData = None, **kwargs
-    ) -> Generator[StreamableMessage, None, None]:
+    ) -> Generator[StreamableMessage, None, Any]:
         raise NotImplementedError
 
     def evaluate(
         self, *args, context: ContextData = None, **kwargs
-    ) -> ReturningGenerator[StreamableMessage, None, None]:
+    ) -> ReturningGenerator[StreamableMessage, None, Any]:
+        """
+        Evaluates the provided input data and streams the resulting messages.
+
+        This method processes the input arguments and utilizes the context for executing
+        the evaluation logic. The evaluation generates a stream of messages which are
+        returned as a generator.
+
+        :param args: Positional arguments required for the evaluation logic.
+        :param context: Optional context data of type ``ContextData`` used for evaluation.
+        :param kwargs: Keyword arguments required for the evaluation logic.
+        :return: A generator of providing the streamed messages,
+            and the final evaluation result.
+        """
         self._ensure_dependencies(context)
         return ReturningGenerator(self._evaluate_impl(*args, context=context, **kwargs))
 
@@ -235,8 +284,23 @@ class BaseExecutionNode:
 
 
 class Orchestrator:
-    def __init__(self, evaluators: list[BaseExecutionNode]):
-        self.evaluators = evaluators
+    """
+    Coordinates the orchestration and execution of evaluators based on provided data.
+
+    The `Orchestrator` class is responsible for managing the evaluation processes executed
+    by a set of evaluators. It ensures that each evaluator is invoked properly, tracks execution
+    history, supports URL normalization, and handles any errors or exceptions raised during
+    the evaluation process. This class uses a context-based strategy to manage shared resources
+    like HTTP sessions and web drivers during the evaluation.
+    """
+    def __init__(self, nodes: list[BaseExecutionNode]):
+        """
+        Initializes the instance with a list of evaluation nodes.
+
+        :param nodes: List of evaluation nodes used for execution.
+        :type nodes: list[BaseExecutionNode]
+        """
+        self.nodes = nodes
 
     def _ensure_protocol(self, url: str):
         url = url.strip()
@@ -256,8 +320,8 @@ class Orchestrator:
         for evaluator in self.evaluators:
             # Iterates evaluators; yields messages; handles exceptions
             yield OrchestratorStateMessage(
-                message=f"Starting evaluation of {evaluator.node_name}...",
-                details=StateDetails(agent_id=evaluator.node_name),
+                message=f"Starting evaluation of {node.node_name}...",
+                details=StateDetails(agent_id=node.node_name, agent_name=node.full_name),
             )
             messages = []
             try:

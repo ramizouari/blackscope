@@ -70,7 +70,7 @@ def invoke_scenario_generation_agent(
     tools: list[BaseTool] = None,
 ):
     """
-    Create a Langchain agent for generating test scenarios from web pages.
+    Invoke a Langchain agent for generating test scenarios from web pages.
 
     This agent combines Selenium browsing tools with an LLM to navigate web pages,
     extract content, and generate comprehensive test scenarios.

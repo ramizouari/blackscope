@@ -14,6 +14,15 @@ class ValueNotAvailableError(Exception):
 
 
 class ReturningGenerator(Generic[YieldT, SendT, ReturnT]):
+    """
+    Class facilitating enhanced generator interaction.
+
+    The ReturningGenerator class is a wrapper around generators that provides additional
+    capabilities such as capturing the return value of a generator after it is exhausted
+    and supporting manual iteration along with additional methods for improved control.
+    It is designed to enable seamless integration with Python's generator behavior, including
+    context management.
+    """
     def __init__(self, gen: Union[Generator[YieldT, SendT, ReturnT], "ReturningGenerator[YieldT, SendT, ReturnT]"]):
         if isinstance(gen, ReturningGenerator):
             self.gen = gen.gen

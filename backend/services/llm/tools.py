@@ -99,6 +99,14 @@ class ExecuteScriptInput(BaseModel):
 
 
 class WithSeleniumDriver(BaseTool):
+    """
+    Represents a tool that utilizes a Selenium WebDriver.
+
+    This class serves as an interface for interacting with a Selenium WebDriver
+    to automate browser activities. It inherits from the `BaseTool` class and
+    is initialized with a Selenium WebDriver instance. This class is designed
+    to facilitate browser-related functionalities by managing a WebDriver instance.
+    """
     _driver: WebDriver = PrivateAttr()
 
     def __init__(self, driver: WebDriver, **kwargs):
