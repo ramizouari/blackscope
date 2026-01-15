@@ -8,6 +8,8 @@ class Config(BaseSettings):
     deepseek_api_key: str | None = None
     openai_api_key: str | None = None
     huggingfacehub_api_token: str | None = None
+    mode : str = "dev"
+    client_host : str | None = None
 
     class Config:
         env_file = ".env"

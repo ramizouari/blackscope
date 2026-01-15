@@ -1,5 +1,7 @@
 from selenium import webdriver
 
+import config
+
 
 def create_headless_firefox_driver():
     """Create a headless Firefox WebDriver with typing."""
@@ -10,6 +12,8 @@ def create_headless_firefox_driver():
     options = Options()
     options.add_argument("--width=1920")  # ensures proper page layout
     options.add_argument("--height=1080")
+    if config.config.headless_browser:
+        options.add_argument("--headless")
 
     driver = webdriver.Firefox(options=options, service=Service(GeckoDriverManager().install()))
     return driver

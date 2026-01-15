@@ -6,6 +6,7 @@ import requests
 
 from pydantic import BaseModel
 
+import config
 from services.evaluators.base import Orchestrator, StreamableMessage
 from services.evaluators.connectivity import AccessCheckNode, DriverAccessNode
 from services.evaluators.drivers import create_headless_firefox_driver
@@ -24,24 +25,30 @@ class UpdateMessage(BaseModel):
     type: str
     content: StreamableMessage
 
+def init_app():
+    app=FastAPI(
+        title="Blackscope",
+        description="Provides Q/A assessment for websites using AI",
+        version="0.0.1",
+        docs_url="/docs",
+        redoc_url="/redoc",
+        openapi_url="/openapi.json"
+    )
+    middlewares = [config.config.client_host]
+    if config.config.mode.lower() == "dev":
+        middlewares.extend(["http://localhost:5173", "http://localhost:3000","http://localhost"])
 
-app = FastAPI(
-    title="Blackscope",
-    description="Provides Q/A assessment for websites using AI",
-    version="0.0.1",
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json"
-)
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=middlewares,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    return app
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = init_app()
 
 
 @app.get("/")
