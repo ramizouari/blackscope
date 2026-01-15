@@ -1,7 +1,8 @@
 # Build stage
 FROM node:20-alpine AS builder
 
-ENV VITE_BACKEND_HOST="http://backend:8000"
+ARG BACKEND_HOST="http://backend:8000"
+ENV VITE_BACKEND_HOST=${BACKEND_HOST}
 
 WORKDIR /app
 
