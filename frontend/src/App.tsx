@@ -16,8 +16,10 @@ function App() {
     setIsLoading(true);
     setIsComplete(false);
 
+    const backendHost = import.meta.env.VITE_BACKEND_HOST || "http://localhost:8000";
+
     try {
-      const response = await fetch("http://localhost:8000/qa", {
+      const response = await fetch(`${backendHost}/qa`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
