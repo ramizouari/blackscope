@@ -3,7 +3,7 @@ from typing import Generator, Literal
 from services.evaluators.base import BaseExecutionNode, ContextData, StreamableMessage, AgentAssessmentMessage, \
     OrchestratorStateMessage, StateDetails
 from services.evaluators.connectivity import DriverAccessNode
-from services.evaluators.qa.generation import TestScenarioGenerationNode
+from services.evaluators.qa.scenarios.generation import TestScenarioGenerationNode
 from services.llm.agents import (
     invoke_scenario_execution_agent,
     TestExecutionResult,

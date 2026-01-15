@@ -11,8 +11,8 @@ from services.evaluators.connectivity import AccessCheckNode, DriverAccessNode
 from services.evaluators.drivers import create_headless_firefox_driver
 from services.evaluators.html.compliance import HtmlComplianceNode
 from services.evaluators.html.parser import HtmlParsingNode
-from services.evaluators.qa.execution import TestScenarioExecutionNode
-from services.evaluators.qa.generation import TestScenarioGenerationNode
+from services.evaluators.qa.scenarios.execution import TestScenarioExecutionNode
+from services.evaluators.qa.scenarios.generation import TestScenarioGenerationNode
 from services.evaluators.qa.ui import UIAnalyzerNode
 
 
