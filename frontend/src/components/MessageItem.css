@@ -1,0 +1,91 @@
+.message-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  background-color: #f5f5f5;
+}
+
+.message-icon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.message-text {
+  flex: 1;
+  line-height: 1.5;
+  color: #333;
+}
+
+.message-item.level-success {
+  background-color: #e8f5e9;
+  border-left: 4px solid #4caf50;
+}
+
+.message-item.level-success .message-icon {
+  color: #4caf50;
+}
+
+.message-item.level-error,
+.message-item.level-bug {
+  background-color: #ffebee;
+  border-left: 4px solid #f44336;
+}
+
+.message-item.level-error .message-icon,
+.message-item.level-bug .message-icon {
+  color: #f44336;
+}
+
+.message-item.level-warning {
+  background-color: #fff3e0;
+  border-left: 4px solid #ff9800;
+}
+
+.message-item.level-warning .message-icon {
+  color: #ff9800;
+}
+
+.message-item.level-info {
+  background-color: #e3f2fd;
+  border-left: 4px solid #2196f3;
+}
+
+.message-item.level-info .message-icon {
+  color: #2196f3;
+}
+
+.message-item.level-improvement {
+  background-color: #f3e5f5;
+  border-left: 4px solid #9c27b0;
+}
+
+.message-item.level-improvement .message-icon {
+  color: #9c27b0;
+}
+
+.message-item.level-vulnerability {
+  background-color: #fce4ec;
+  border-left: 4px solid #e91e63;
+}
+
+.message-item.level-vulnerability .message-icon {
+  color: #e91e63;
+}
+
+.message-item.level-malicious {
+  background-color: #ffe0b2;
+  border-left: 4px solid #ff5722;
+}
+
+.message-item.level-malicious .message-icon {
+  color: #ff5722;
+}
