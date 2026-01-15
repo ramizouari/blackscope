@@ -10,8 +10,8 @@ def create_headless_firefox_driver():
     from selenium.webdriver.firefox.service import Service
 
     options = Options()
-    options.add_argument("--width=1920")  # ensures proper page layout
-    options.add_argument("--height=1080")
+    options.add_argument(f"--width={config.config.browser_width}")  # ensures proper page layout
+    options.add_argument(f"--height={config.config.browser_height}")
     if config.config.headless_browser:
         options.add_argument("--headless")
 
