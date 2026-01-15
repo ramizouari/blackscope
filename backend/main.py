@@ -13,6 +13,7 @@ from services.evaluators.html.compliance import HtmlComplianceNode
 from services.evaluators.html.parser import HtmlParsingNode
 from services.evaluators.qa.execution import TestScenarioExecutionNode
 from services.evaluators.qa.generation import TestScenarioGenerationNode
+from services.evaluators.qa.ui import UIAnalyzerNode
 
 
 class UrlRequest(BaseModel):
@@ -68,12 +69,14 @@ async def provide_quality_assurance(url: UrlRequest):
         test_scenario_generation = TestScenarioGenerationNode()
         test_scenario_execution = TestScenarioExecutionNode()
         driver_access = DriverAccessNode()
+        ui_analyzer = UIAnalyzerNode()
         orch = Orchestrator(
             [
                 connector,
                 driver_access,
                 html_parsing,
                 html_compliance,
+                ui_analyzer,
                 test_scenario_generation,
                 test_scenario_execution,
             ]

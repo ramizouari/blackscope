@@ -7,8 +7,13 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 from selenium.webdriver.remote.webdriver import WebDriver
+
+from .models import get_vl_model, DEFAULT_MODEL
 from .prompt_manager import get_prompt_manager
 import time
+import io
+import base64
+from PIL import Image
 
 from services.llm.tools import get_selenium_tools, SeleniumGetPageContentTool
 
@@ -293,3 +298,140 @@ class TestExecutionReport(BaseModel):
     failed: int = Field(description="Number of scenarios that failed")
     errors: int = Field(description="Number of scenarios with errors")
     results: List[TestExecutionResult] = Field(description="Individual test results")
+
+
+def downsize_image(img: Image.Image, max_size: tuple[int,int] = (1280,720)) -> Image.Image:
+    # Downsize (e.g., to 50% of original size or a specific max width)
+    # Using Lanczos for high-quality downsampling
+    img.thumbnail(max_size, Image.Resampling.LANCZOS)
+    return img
+
+def prepare_screenshot_for_inference(driver: WebDriver) -> str:
+    """
+    Prepares a browser screenshot for inference by processing and compressing the image data.
+
+    The function captures a screenshot from the provided WebDriver instance, downsizes the image,
+    converts it to an appropriate format, and compresses it for efficient storage or transmission.
+    The processed image is then encoded into a Base64 string.
+
+    :param driver: WebDriver instance used to capture the screenshot.
+    :type driver: WebDriver
+
+    :return: Base64 encoded string representation of the processed screenshot.
+    :rtype: str
+    """
+    screenshot_bytes = driver.get_screenshot_as_png()
+
+    # Open with PIL
+    img = Image.open(io.BytesIO(screenshot_bytes))
+    img = downsize_image(img)
+
+    # Compress and convert back to bytes
+    buffer = io.BytesIO()
+    # Convert to RGB if it's RGBA (PNG) to save as JPEG
+    if img.mode in ("RGBA", "P"):
+        img = img.convert("RGB")
+
+    # Save as JPEG with compression quality 1-95 (85 is a good balance)
+    img.save(buffer, format="JPEG", quality=85, optimize=True)
+
+    # Convert to base64 string
+    b64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    return f"data:image/jpeg;base64,{b64}"
+
+class UIAssessmentCategory(BaseModel):
+    """Assessment of a specific UI category"""
+    category: str = Field(description="Category name (e.g., 'Layout', 'Color Scheme', 'Typography')")
+    score: int = Field(description="Score from 1-10 for this category")
+    feedback: str = Field(description="Detailed feedback about this category")
+    issues: Optional[List[str]] = Field(default=None, description="Specific issues identified")
+
+
+class UIQualityAssessment(BaseModel):
+    """Complete UI quality assessment"""
+    overall_score: int = Field(description="Overall UI quality score from 1-10")
+    overall_feedback: str = Field(description="High-level summary of the UI quality")
+    categories: List[UIAssessmentCategory] = Field(description="Detailed assessment by category")
+    strengths: List[str] = Field(description="Key strengths of the UI")
+    improvements: List[str] = Field(description="Suggested improvements")
+
+
+def invoke_ui_analyzer_agent(driver: WebDriver,
+                             vl_model: BaseChatModel | str = None,
+                             model: BaseChatModel | str = None) -> UIQualityAssessment:
+    """
+    Analyze the UI quality of the current page using a vision-language model.
+
+    This agent captures a screenshot of the current page and uses a VL model to assess
+    various aspects of the UI including layout, color scheme, typography, accessibility,
+    and user experience.
+
+    Args:
+        driver: Selenium WebDriver instance with the page to analyze
+        vl_model: Optional vision-language model to use for page analysis
+        model: Optional LLM model to use for structured output parsing
+    Returns:
+        UIQualityAssessment: Structured assessment of the UI quality
+    """
+
+    if vl_model is None:
+        vl_model = get_vl_model()
+    if isinstance(vl_model, str):
+        vl_model = init_chat_model(vl_model)
+
+    # Capture the screenshot as bytes
+    base64_screenshot = prepare_screenshot_for_inference(driver)
+
+    # Create the analysis prompt
+    analysis_prompt = """Analyze this web page UI and provide a comprehensive quality assessment. Evaluate the following aspects:
+
+1. **Layout & Structure**: Is the layout well-organized, balanced, and intuitive? Are elements properly aligned?
+2. **Color Scheme**: Is the color palette harmonious and appropriate? Does it provide good contrast and readability?
+3. **Typography**: Are fonts readable, appropriately sized, and consistently used?
+4. **Visual Hierarchy**: Is it clear what's important? Do headings, buttons, and content have proper emphasis?
+5. **Whitespace & Density**: Is there adequate spacing between elements? Is the page too cluttered or too sparse?
+6. **Consistency**: Are UI elements, styles, and patterns used consistently throughout?
+7. **Accessibility**: Does the design appear accessible (contrast, text size, clear interactive elements)?
+8. **Modern Design**: Does it follow current UI/UX best practices?
+
+Provide a detailed analysis covering strengths, weaknesses, and specific recommendations for improvement."""
+
+    prompt = HumanMessage(
+        content=[
+            {"type": "text", "text": analysis_prompt},
+            {
+                "type": "image_url",
+                "image_url": {"url": base64_screenshot},
+            },
+        ]
+    )
+
+    # Get the vision model's analysis
+    vl_response = vl_model.invoke([prompt])
+    analysis_text = vl_response.content if hasattr(vl_response, 'content') else str(vl_response)
+
+    # Parse the unstructured analysis into structured output
+    if model is None:
+        model = DEFAULT_MODEL
+    if isinstance(model, str):
+        model = init_chat_model(model)
+
+    structured_llm = model.with_structured_output(UIQualityAssessment)
+
+    parsing_prompt = f"""Based on the following UI analysis, create a structured quality assessment.
+
+UI Analysis:
+{analysis_text}
+
+Extract and structure:
+- An overall quality score (1-10)
+- Overall feedback summary
+- Category-based assessments (Layout, Color Scheme, Typography, Visual Hierarchy, Accessibility, etc.)
+  Each category should have a score (1-10), feedback, and specific issues if any
+- List of key strengths
+- List of suggested improvements
+
+Return the structured UI quality assessment."""
+
+    assessment = cast(UIQualityAssessment, structured_llm.invoke(parsing_prompt))
+    return assessment
