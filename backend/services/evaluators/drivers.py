@@ -2,14 +2,6 @@ from selenium import webdriver
 
 import config
 
-def create_driver():
-    match config.config.browser_driver:
-        case "firefox":
-            return create_firefox_driver()
-        case "chrome":
-            return create_selenium_driver()
-    raise ValueError(f"Unsupported browser type: {config.config.browser_driver}")
-
 def create_firefox_driver():
     """Create a headless Firefox WebDriver with typing."""
     from selenium.webdriver.firefox.options import Options
@@ -26,7 +18,7 @@ def create_firefox_driver():
     return driver
 
 
-def create_selenium_driver():
+def create_chrome_driver():
     from selenium.webdriver.chrome.options import Options
     from webdriver_manager.chrome import ChromeDriverManager
     from selenium.webdriver.chrome.service import Service
@@ -40,3 +32,11 @@ def create_selenium_driver():
     options.add_argument("--disable-dev-shm-usage")  # avoid memory issues
     driver = webdriver.Chrome(options=options, service=Service(ChromeDriverManager().install()))
     return driver
+
+def create_driver():
+    match config.config.browser_driver:
+        case "firefox":
+            return create_firefox_driver()
+        case "chrome":
+            return create_chrome_driver()
+    raise ValueError(f"Unsupported browser type: {config.config.browser_driver}")
