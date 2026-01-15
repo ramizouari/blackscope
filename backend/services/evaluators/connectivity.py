@@ -4,15 +4,26 @@ import requests
 
 from .base import (
     BaseExecutionNode,
-    StreamableMessage,
     ContextData,
-    NodePreconditionFailure,
 )
+from .errors import NodePreconditionFailure
+from .messages import StreamableMessage
 
 PLAUSIBLE_CONTENT_TYPES = ["text/html", "application/xhtml+xml"]
 
 
 class AccessCheckNode(BaseExecutionNode, node_name="access_check"):
+    """
+    Executes access checks for a target website to ensure it generates HTML, and it complies
+    with content type standards and evaluates responses from HTTP methods such as OPTIONS and GET.
+
+    The class checks the `Content-Type` header in the OPTIONS and GET responses, validates
+    against a list of plausible content types, and identifies any discrepancies in the
+    headers. It reports issues and successes during the evaluation process.
+
+    :ivar node_name: The name of the node that represents this class.
+    :type node_name: str
+    """
 
     def _inspect_content_type(self, response: requests.Response, method: Literal["GET", "OPTIONS"]):
         if "Content-Type" not in response.headers:
@@ -54,8 +65,15 @@ class AccessCheckNode(BaseExecutionNode, node_name="access_check"):
             )
         return response
 
+    @property
+    def full_name(self):
+        return "Reachability Check"
+
 
 class DriverAccessNode(BaseExecutionNode, node_name="driver_access"):
+    """
+    Provides access to a web driver for executing actions on a website.
+    """
     __dependencies__ = (AccessCheckNode,)
 
     def _evaluate_impl(
@@ -66,3 +84,7 @@ class DriverAccessNode(BaseExecutionNode, node_name="driver_access"):
             message="Successfully loaded the website into AI-powered browser.", level="info"
         )
         return None
+
+    @property
+    def full_name(self):
+        return "WebDriver Access"

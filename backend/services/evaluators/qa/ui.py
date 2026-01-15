@@ -1,7 +1,7 @@
 from typing import Generator, Literal
 
-from services.evaluators.base import BaseExecutionNode, ContextData, StreamableMessage, AgentAssessmentMessage, \
-    MetricsMessage, MetricsList, Metric
+from services.evaluators.base import BaseExecutionNode, ContextData
+from services.evaluators.messages import StreamableMessage, AgentAssessmentMessage, Metric, MetricsList, MetricsMessage
 from services.evaluators.connectivity import DriverAccessNode
 from services.evaluators.qa.scenarios.generation import TestScenarioGenerationNode
 from services.llm.agents import (
@@ -12,6 +12,15 @@ from services.llm.models import DEFAULT_MODEL, DEFAULT_VL_MODEL, get_vl_model
 
 
 class UIAnalyzerNode(BaseExecutionNode, node_name="ui_analyzer"):
+    """
+    Class for analyzing UI quality and providing assessments.
+
+    This class is designed to execute a UI quality assessment using an underlying driver
+    and a preconfigured UI analysis model. It evaluates the current state of a webpage
+    and extracts relevant quality metrics, including category-specific scores, feedback,
+    and issues. The functionality ensures consistency of the URL within the driver and
+    reloads the page when necessary, providing high accuracy in assessment results.
+    """
     __dependencies__ = (DriverAccessNode,)
 
     def _evaluate_impl(
@@ -39,3 +48,7 @@ class UIAnalyzerNode(BaseExecutionNode, node_name="ui_analyzer"):
             )
         )
         return results
+
+    @property
+    def full_name(self):
+        return "UI Quality Assessment"

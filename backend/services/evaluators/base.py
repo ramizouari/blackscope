@@ -1,120 +1,15 @@
-import datetime
-from dataclasses import dataclass, field
-from typing import Generator, Any, Literal, Callable
+from dataclasses import dataclass
+from typing import Generator, Any
 from typing import Sequence
 from selenium.webdriver.remote.webdriver import WebDriver
-from functools import partial
 import requests
-from pydantic import BaseModel, Field
+
+from .errors import NodePreconditionFailure, NodeDependencyFailure
+from .messages import StreamableMessage, StateDetails, OrchestratorStateMessage
 from .returning_generators import ReturningGenerator
 import logging
 
-evaluator_logger = logging.getLogger("evaluators")
-
-
-class StreamableMessage(BaseModel):
-    agent_id: str | None = None
-    scenario_id: str | None = None
-    message: str
-    source: Literal["agent", "orchestrator"] = "agent"
-    type: Literal["evaluation","state","feedback", "test_scenarios", "metrics"] = "evaluation"
-    level: Literal[
-        "info", "improvement", "warning", "error",
-        "bug", "vulnerability", "malicious", "success"
-    ] = "info"
-    details: Any = None
-    timestamp: datetime.datetime = Field(default_factory=partial(datetime.datetime.now,tz=datetime.timezone.utc))
-
-class StateDetails(BaseModel):
-    agent_id : str | None = None
-    scenario_id : str | None = None
-    is_end_state : bool = False
-
-
-class OrchestratorStateMessage(StreamableMessage):
-    source : Literal["orchestrator"] = "orchestrator"
-    type: Literal["state"] = "state"
-    details: StateDetails | None = None
-
-class AgentAssessmentMessage(StreamableMessage):
-    source : Literal["agent"] = "agent"
-
-class TestScenariosMessage(StreamableMessage):
-    source : Literal["agent"] = "agent"
-    type: Literal["test_scenarios"] = "test_scenarios"
-
-
-
-class Metric(BaseModel):
-    name: str
-    score: int | None = None
-    feedback: str | None = None
-    issues: list[str] | None = None
-    improvements: list[str] | None = None
-
-class MetricsList(BaseModel):
-    name : str | None = None
-    metrics: list[Metric]
-    feedback: str | None = None
-    score: int | None = None
-
-class MetricsMessage(StreamableMessage):
-    source : Literal["agent"] = "agent"
-    type: Literal["metrics"] = "metrics"
-    details : Metric | MetricsList
-
-
-class NodePreconditionFailure(BaseException):
-    """
-    Raised when a process fails due to unrecoverable input issues
-    that cannot be circumvented, making it pointless to proceed with the execution.
-
-    Note: This is not a failure of the evaluation process itself, but rather a failure
-    that prevents the evaluation from continuing due to invalid or inconsistent input.
-    """
-
-    @property
-    def message(self) -> str:
-        return str(self)
-
-
-class NodeAssertionFailure(NodePreconditionFailure):
-    """
-    Represents a specific type of evaluation failure where an assertion has failed.
-
-    This class is a subclass of `EvaluationFailure` and is designed to encapsulate
-    details related to assertion failures that occur during evaluation. It retains
-    additional context or parameters, if necessary, to aid in debugging or logging
-    the assertion information.
-
-    :ivar expected: The expected value in the assertion failure.
-    :type expected: Any
-    :ivar actual: The actual value encountered that caused the failure.
-    :type actual: Any
-    :ivar message: An optional message providing details about the failure.
-    :type message: str
-    """
-
-
-class NodeDependencyFailure(NodePreconditionFailure):
-    """
-    Represents a specific type of evaluation failure caused by dependencies.
-
-    This class is a specialized subclass of `EvaluationFailure`. It is used
-    to indicate that an evaluation process failed due to an issue with one or
-    more dependencies required for the evaluation. The class provides details
-    about these dependencies to assist in diagnosing and addressing the
-    underlying issue.
-
-    :ivar dependency_name: The name of the dependency that caused the failure.
-    :type dependency_name: str
-    :ivar dependency_version: The version of the dependency causing the
-        failure, if applicable.
-    :type dependency_version: str, optional
-    :ivar message: A descriptive message detailing the failure and the
-        problematic dependency.
-    :type message: str
-    """
+node_logger = logging.getLogger("evaluators")
 
 
 @dataclass
@@ -210,7 +105,7 @@ class BaseExecutionNode:
                     f"Skipping {self.node_name} since {dep_name} run failed."
                 )
 
-    def __init__(self, logger=evaluator_logger):
+    def __init__(self, logger=node_logger):
         self.logger = logger
 
     def __init_subclass__(cls, node_name: str | None = None):
@@ -317,7 +212,7 @@ class Orchestrator:
             driver=driver,
             history=NodeExecutionHistory(),
         )
-        for evaluator in self.evaluators:
+        for node in self.nodes:
             # Iterates evaluators; yields messages; handles exceptions
             yield OrchestratorStateMessage(
                 message=f"Starting evaluation of {node.node_name}...",
@@ -325,28 +220,30 @@ class Orchestrator:
             )
             messages = []
             try:
-                gen = evaluator.evaluate(*args, context=context, **kwargs)
+                gen = node.evaluate(*args, context=context, **kwargs)
                 for message in gen:
                     if message.agent_id is None:
-                        message.agent_id = evaluator.node_name
+                        message.agent_id = node.node_name
+                        message.agent_name = node.full_name
                     messages.append(message)
                     yield message
                 context.history.add_result(
-                    AgentExecutionArtifact(evaluator.node_name, messages, gen.value)
+                    AgentExecutionArtifact(node.node_name, messages, gen.value)
                 )
             except NodePreconditionFailure as err:
                 yield StreamableMessage(
-                    agent_id=evaluator.node_name, level="error", message=err.message
+                    agent_id=node.node_name, agent_name=node.full_name,
+                    level="error", message=err.message
                 )
                 context.history.add_result(
-                    AgentExecutionArtifact(evaluator.node_name, messages, err)
+                    AgentExecutionArtifact(node.node_name, messages, err)
                 )
             except Exception as e:
-                evaluator_logger.exception(e)
+                node_logger.exception(e)
                 yield StreamableMessage(
                     agent_id="orchestrator",
                     source="agent",
                     level="error",
-                    message=f"{evaluator.node_name} failed to run due to an unexpected error. Please contact support..",
+                    message=f"{node.node_name} failed to run due to an unexpected error. Please contact support..",
                 )
         yield OrchestratorStateMessage(message="Evaluation complete.", details=StateDetails(is_end_state=True))

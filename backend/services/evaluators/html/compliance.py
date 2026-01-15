@@ -2,11 +2,19 @@ from typing import Generator, Any
 from bs4 import BeautifulSoup, Tag
 import re
 
-from ..base import BaseExecutionNode, StreamableMessage, ContextData, NodeAssertionFailure, MetricsMessage, MetricsList, Metric
+from ..base import BaseExecutionNode, ContextData
+from ..errors import NodeAssertionFailure
+from ..messages import StreamableMessage, Metric, MetricsList, MetricsMessage
 from ..connectivity import AccessCheckNode
 
 
 class HtmlComplianceNode(BaseExecutionNode, node_name="html_compliance"):
+    """
+    Validates and analyzes HTML content for structural integrity, security vulnerabilities,
+    accessibility adherence, and best practice compliance. Provides a mechanism to report
+    identified issues and apply corrective measures, ensuring the HTML is improved and
+    ready for further processing. The results are delivered via streamable messages.
+    """
     __dependencies__ = (AccessCheckNode.node_name,)
 
     def _evaluate_impl(
@@ -295,3 +303,7 @@ class HtmlComplianceNode(BaseExecutionNode, node_name="html_compliance"):
         except Exception as e:
             self.logger.exception(e)
             raise NodeAssertionFailure(f"Failed to parse HTML: {str(e)}")
+
+    @property
+    def full_name(self):
+        return "HTML Compliance Assessment"

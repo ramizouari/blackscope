@@ -2,11 +2,18 @@ from typing import Generator, Any
 from bs4 import BeautifulSoup, Tag
 import re
 import bs4
-from ..base import BaseExecutionNode, StreamableMessage, ContextData, NodeAssertionFailure
+from ..base import BaseExecutionNode, ContextData
+from ..errors import NodeAssertionFailure
+from ..messages import StreamableMessage
 from ..connectivity import AccessCheckNode
 
 
 class HtmlParsingNode(BaseExecutionNode, node_name="html_validator"):
+    """
+    Validates HTML for issues that can affect parsing.
+
+    Only checks for problems that impact HTML parsing, not accessibility or best practices.
+    """
     __dependencies__ = (AccessCheckNode,)
 
     def _evaluate_impl(
@@ -129,3 +136,7 @@ class HtmlParsingNode(BaseExecutionNode, node_name="html_validator"):
 
         except Exception as e:
             raise NodeAssertionFailure(f"Failed to parse HTML: {str(e)}")
+
+    @property
+    def full_name(self):
+        return "HTML Syntax Check"

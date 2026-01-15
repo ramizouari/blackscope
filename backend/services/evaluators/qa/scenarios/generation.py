@@ -2,7 +2,8 @@ from typing import Generator, Any
 
 import requests
 
-from services.evaluators.base import BaseExecutionNode, ContextData, StreamableMessage, TestScenariosMessage
+from services.evaluators.base import BaseExecutionNode, ContextData
+from services.evaluators.messages import StreamableMessage, TestScenariosMessage
 from services.evaluators.connectivity import DriverAccessNode, AccessCheckNode
 from services.evaluators.html.parser import HtmlParsingNode
 from services.llm.agents import invoke_scenario_generation_agent
@@ -13,6 +14,13 @@ MAX_CONTENT_LENGTH = 1000
 
 
 class TestScenarioGenerationNode(BaseExecutionNode, node_name="scenario_generation"):
+    """
+    Represents a node responsible for scenario generation within an execution flow.
+
+    This class is designed to evaluate and generate test scenarios based on the provided
+    context, URL, and parsed HTML content. It invokes a scenario generation agent
+    to produce test scenarios.
+    """
     __dependencies__ = (DriverAccessNode, HtmlParsingNode)
 
     def _evaluate_impl(
@@ -38,3 +46,7 @@ class TestScenarioGenerationNode(BaseExecutionNode, node_name="scenario_generati
         )
 
         return result
+
+    @property
+    def full_name(self):
+        return "Test Scenario Generation"

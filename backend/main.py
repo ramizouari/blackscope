@@ -7,7 +7,8 @@ import requests
 from pydantic import BaseModel
 
 import config
-from services.evaluators.base import Orchestrator, StreamableMessage
+from services.evaluators.base import Orchestrator
+from services.evaluators.messages import StreamableMessage
 from services.evaluators.connectivity import AccessCheckNode, DriverAccessNode
 from services.evaluators.drivers import create_driver
 from services.evaluators.html.compliance import HtmlComplianceNode
