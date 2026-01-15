@@ -1,0 +1,14 @@
+Execute the following test scenario:
+
+**Scenario Name**: {{ scenario_name }}
+**Objective**: {{ objective }}
+**Preconditions**: {{ preconditions or 'None' }}
+**Base URL**: {{ url }}
+
+**Steps to Execute**:
+{% for step in steps -%}
+{{ loop.index }}. {{ step }}
+{% endfor %}
+**Expected Result**: {{ expected_result }}
+
+Execute each step carefully using the available Selenium tools. After completing all steps, evaluate whether the actual results match the expected results. Provide a detailed report of what happened during execution.

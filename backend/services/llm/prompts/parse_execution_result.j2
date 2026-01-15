@@ -1,0 +1,13 @@
+Based on the following test execution report, create a structured test result.
+
+Scenario Name: {{ scenario_name }}
+
+Execution Report:
+{{ execution_report }}
+
+Analyze the report and determine:
+- status: "PASSED" if all steps completed successfully and expected results were met, "FAILED" if expected results were not met, "ERROR" if technical issues prevented execution
+- execution_details: Summary of what happened during execution
+- errors_encountered: List of any errors or failures (empty list if none)
+
+Return the structured test execution result.

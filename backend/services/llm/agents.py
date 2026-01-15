@@ -87,30 +87,8 @@ def invoke_scenario_generation_agent(
         model = init_chat_model(model)
 
     # Create the agent prompt
-    system_message = """You are a web testing expert specializing in creating comprehensive test scenarios.
-
-You have access to Selenium browser tools to navigate and interact with web pages. Your task is to:
-1. Use the selenium_navigate tool to visit the requested URL
-2. Use selenium_get_page_text or selenium_get_page_content to extract page information
-3. Analyze the page structure, content, and interactive elements
-4. Generate simple test scenarios covering (some, not necessarily all):
-   - User navigation flows
-   - Form submissions and validations
-   - Interactive elements (buttons, links, dropdowns)
-   - Accessibility features
-5. Test scenarios should be focused on a single task and should be VERY simple
-6. Generate up to 3 test scenarios.
-7. IGNORE content not relevant to testing
-
-
-Format your test scenarios clearly with:
-- Scenario name/title
-- Objective (what is being tested)
-- Steps (user actions)
-- Expected results
-- Preconditions (if any)
-
-Be thorough and consider edge cases, error conditions, and user experience aspects."""
+    prompt_manager = get_prompt_manager()
+    system_message = prompt_manager.render("scenario_generation_system.j2")
 
     prompt = create_scenario_generation_prompt(url=url, title=title, content=content)
     default_tools = [
@@ -150,13 +128,8 @@ def parse_scenarios_to_structured_output(model, scenario_text: str) -> TestScena
     """
     structured_llm = model.with_structured_output(TestScenarioList)
 
-    parsing_prompt = f"""Parse the following test scenarios into structured format.
-Extract each scenario's name, objective, steps (as a list), expected result, and preconditions.
-
-Test Scenarios:
-{scenario_text}
-
-Return a structured list of all scenarios found in the text."""
+    prompt_manager = get_prompt_manager()
+    parsing_prompt = prompt_manager.render("parse_scenarios.j2", scenario_text=scenario_text)
 
     result = structured_llm.invoke(parsing_prompt)
     return result
@@ -209,38 +182,19 @@ def invoke_scenario_execution_agent(
     start_time = time.time()
 
     # Create the system message for the execution agent
-    system_message = """You are an automated test execution agent. Your task is to:
-1. Execute test scenarios step by step using Selenium browser tools
-2. Verify that each step produces the expected outcome
-3. Report any failures or errors encountered
-4. Determine if the test PASSED or FAILED based on the expected results
-
-Guidelines:
-- Keep test scenarios VERY SIMPLE and focused on a single task
-- The scenario should only be executed once
-- Execute each step in the test scenario sequentially
-- Focus mainly on final results
-- If any step fails, mark the test as FAILED and explain why
-- If all steps complete and match expected results, mark as PASSED
-- If you encounter technical errors (element not found, timeout, etc.), mark as ERROR
-"""
+    prompt_manager = get_prompt_manager()
+    system_message = prompt_manager.render("scenario_execution_system.j2")
 
     # Create the execution prompt
-    steps_text = "\n".join([f"{i + 1}. {step}" for i, step in enumerate(scenario.steps)])
-
-    execution_prompt = f"""Execute the following test scenario:
-
-**Scenario Name**: {scenario.name}
-**Objective**: {scenario.objective}
-**Preconditions**: {scenario.preconditions or 'None'}
-**Base URL**: {url}
-
-**Steps to Execute**:
-{steps_text}
-
-**Expected Result**: {scenario.expected_result}
-
-Execute each step carefully using the available Selenium tools. After completing all steps, evaluate whether the actual results match the expected results. Provide a detailed report of what happened during execution."""
+    execution_prompt = prompt_manager.render(
+        "scenario_execution_prompt.j2",
+        scenario_name=scenario.name,
+        objective=scenario.objective,
+        preconditions=scenario.preconditions,
+        url=url,
+        steps=scenario.steps,
+        expected_result=scenario.expected_result
+    )
 
     # Create the agent
     agent = create_agent(
@@ -270,19 +224,12 @@ Execute each step carefully using the available Selenium tools. After completing
     # Parse the execution report into structured output
     structured_llm = model.with_structured_output(TestExecutionResult)
 
-    parsing_prompt = f"""Based on the following test execution report, create a structured test result.
-
-Scenario Name: {scenario.name}
-
-Execution Report:
-{agent_message}
-
-Analyze the report and determine:
-- status: "PASSED" if all steps completed successfully and expected results were met, "FAILED" if expected results were not met, "ERROR" if technical issues prevented execution
-- execution_details: Summary of what happened during execution
-- errors_encountered: List of any errors or failures (empty list if none)
-
-Return the structured test execution result."""
+    prompt_manager = get_prompt_manager()
+    parsing_prompt = prompt_manager.render(
+        "parse_execution_result.j2",
+        scenario_name=scenario.name,
+        execution_report=agent_message
+    )
 
     execution_result = cast(TestExecutionResult, structured_llm.invoke(parsing_prompt))
     execution_result.execution_time_seconds = execution_time
@@ -383,18 +330,8 @@ def invoke_ui_analyzer_agent(driver: WebDriver,
     base64_screenshot = prepare_screenshot_for_inference(driver)
 
     # Create the analysis prompt
-    analysis_prompt = """Analyze this web page UI and provide a comprehensive quality assessment. Evaluate the following aspects:
-
-1. **Layout & Structure**: Is the layout well-organized, balanced, and intuitive? Are elements properly aligned?
-2. **Color Scheme**: Is the color palette harmonious and appropriate? Does it provide good contrast and readability?
-3. **Typography**: Are fonts readable, appropriately sized, and consistently used?
-4. **Visual Hierarchy**: Is it clear what's important? Do headings, buttons, and content have proper emphasis?
-5. **Whitespace & Density**: Is there adequate spacing between elements? Is the page too cluttered or too sparse?
-6. **Consistency**: Are UI elements, styles, and patterns used consistently throughout?
-7. **Accessibility**: Does the design appear accessible (contrast, text size, clear interactive elements)?
-8. **Modern Design**: Does it follow current UI/UX best practices?
-
-Provide a detailed analysis covering strengths, weaknesses, and specific recommendations for improvement."""
+    prompt_manager = get_prompt_manager()
+    analysis_prompt = prompt_manager.render("ui_analysis.j2")
 
     prompt = HumanMessage(
         content=[
@@ -418,20 +355,8 @@ Provide a detailed analysis covering strengths, weaknesses, and specific recomme
 
     structured_llm = model.with_structured_output(UIQualityAssessment)
 
-    parsing_prompt = f"""Based on the following UI analysis, create a structured quality assessment.
-
-UI Analysis:
-{analysis_text}
-
-Extract and structure:
-- An overall quality score (1-10)
-- Overall feedback summary
-- Category-based assessments (Layout, Color Scheme, Typography, Visual Hierarchy, Accessibility, etc.)
-  Each category should have a score (1-10), feedback, and specific issues if any
-- List of key strengths
-- List of suggested improvements
-
-Return the structured UI quality assessment."""
+    prompt_manager = get_prompt_manager()
+    parsing_prompt = prompt_manager.render("parse_ui_assessment.j2", analysis_text=analysis_text)
 
     assessment = cast(UIQualityAssessment, structured_llm.invoke(parsing_prompt))
     return assessment
