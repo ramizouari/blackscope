@@ -186,7 +186,7 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>URL Q/A Assessment</h1>
+        <h1>Blackscope</h1>
         <p>Analyze websites with automated quality assurance agents</p>
       </header>
 

@@ -92,7 +92,7 @@ async def provide_quality_assurance(url: UrlRequest):
         with requests.Session() as session, create_driver() as driver:
             session.headers.update(
                 {
-                    "User-Agent": "HTML-QA/0.1",
+                    "User-Agent": "blackscope/0.1",
                     "Accept": "text/html,application/xhtml+xml,application/xml",
                     "Accept-Language": "en-US,en;q=0.5",
                     "Accept-Encoding": "gzip, deflate",
